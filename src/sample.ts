@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as cheerio from 'cheerio';
+import { fetchJobPostingHTML, parseJobPostingHTML } from './services/scraper';
 
 // 게임잡 채용공고 데이터 타입 정의
 interface JobPosting {
@@ -17,7 +18,7 @@ interface JobPosting {
  * @param page 페이지 번호
  * @returns 채용공고 배열
  */
-async function crawlGamejobPostings(page: number = 1): Promise<JobPosting[]> {
+async function getGamejobPostings(page: number = 1): Promise<JobPosting[]> {
   try {
     // 제공된 URL 및 페이로드 정보로 요청 생성
     const response = await axios({
@@ -83,18 +84,21 @@ async function main() {
   console.log('게임잡 채용공고 크롤링 시작...');
   
   // 첫 번째 페이지 크롤링
-  // const firstPageJobs = await crawlGamejobPostings(1);
+  // const firstPageJobs = await getGamejobPostings(1);
   // console.log('1페이지 결과:', firstPageJobs);
   
-  const htmlString = fs.readFileSync(path.join(__dirname, '..', 'data', 'jobList.html'), 'utf-8');
-  const $ = cheerio.load(htmlString);
-  // Extract all <strong> elements and convert to an array with their text content
-  const jobInfos = $('strong').toArray().map(elem => $(elem).text().trim());
-  const modifiedDates = $('span.modifyDate').toArray().map(elem => $(elem).text().trim());
+  // const htmlString = fs.readFileSync(path.join(__dirname, '..', 'data', 'jobList.html'), 'utf-8');
+  // const $ = cheerio.load(htmlString);
+  // // Extract all <strong> elements and convert to an array with their text content
+  // const jobInfos = $('strong').toArray().map(elem => $(elem).text().trim());
+  // const modifiedDates = $('span.modifyDate').toArray().map(elem => $(elem).text().trim());
   
   // Display the array
-  console.log(jobInfos);
-  console.log(modifiedDates);  
+  // console.log(jobInfos);
+  // console.log(modifiedDates);
+  const htmlString = await fetchJobPostingHTML([16], 1);
+  const result = parseJobPostingHTML(htmlString);
+  console.log(JSON.stringify(result, null, 2));
 }
 
 // 실행
