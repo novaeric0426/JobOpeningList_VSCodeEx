@@ -1,15 +1,7 @@
 // 확장 프로그램 기본 구조
 import * as vscode from 'vscode';
-import { fetchJobPostingHTML, getBodyHTMLsFromIframes, parseJobPostingHTML } from './services/scraper';
-
-// 채용공고 데이터 타입
-interface JobPosting {
-  id: string;
-  company: string;
-  title: string;
-  registeredDate: string;
-  url: string;
-}
+import { fetchJobPostingHTML, getBodyHTMLsFromIframes, getJobPostingCount, parseJobPostingHTML } from './services/scraper';
+import { JobPosting } from './models/job';
 
 // 채용공고 트리 뷰 제공자
 class JobPostingsProvider implements vscode.TreeDataProvider<JobItem> {
@@ -107,14 +99,19 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('jobCrawler.refreshJobs', async () => {
       jobPostingsProvider.resetJobs();
       // 실제로는 여기서 크롤링을 수행하고 결과를 jobPostingsProvider에 전달
-      const htmlString = await fetchJobPostingHTML([16], 1);
-      const result = parseJobPostingHTML(htmlString);
+      const totalJobPostingCount = await getJobPostingCount([16]);
+      const totalPageCount = Math.ceil(totalJobPostingCount / 40);
+      vscode.window.showInformationMessage(`총 ${totalJobPostingCount}개의 채용공고가 있습니다. 총 ${totalPageCount}페이지를 크롤링합니다.`);
+      for (let i = 1; i <= totalPageCount; ++i) {
+        const htmlString = await fetchJobPostingHTML([16], i);
+        const result = parseJobPostingHTML(htmlString);
+        for (let j = 0; j < result.length; ++j) {
+          jobPostingsProvider.addJob(result[j]);
+        }
+      }
 
       vscode.window.showInformationMessage('채용공고 새로고침 중...');
-      
-      for (let i = 0; i < result.length; ++i) {
-        jobPostingsProvider.addJob(result[i]);
-      }
+
       jobPostingsProvider.refresh();
       vscode.window.showInformationMessage('채용공고가 업데이트되었습니다.');
     })

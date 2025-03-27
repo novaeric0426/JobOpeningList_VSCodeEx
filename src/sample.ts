@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+import { getJobPostingCount } from './services/scraper';
 
 (async () => {
     const browser = await puppeteer.launch({ headless: true });
@@ -15,7 +16,6 @@ import puppeteer from 'puppeteer';
             });
             const bodyHTML = await page.evaluate(() => document.body.innerHTML);
             console.log('Body HTML:', bodyHTML);
-            
         } else {
             console.log('Iframe not found');
         }
