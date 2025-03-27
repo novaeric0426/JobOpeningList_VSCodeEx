@@ -1,6 +1,6 @@
 // 확장 프로그램 기본 구조
 import * as vscode from 'vscode';
-import { fetchJobPostingHTML, parseJobPostingHTML } from './services/scraper';
+import { fetchJobPostingHTML, getBodyHTMLsFromIframes, parseJobPostingHTML } from './services/scraper';
 
 // 채용공고 데이터 타입
 interface JobPosting {
@@ -83,7 +83,22 @@ export function activate(context: vscode.ExtensionContext) {
   // URL 열기 명령 등록
   context.subscriptions.push(
     vscode.commands.registerCommand('jobCrawler.openJobURL', (url: string) => {
-      vscode.env.openExternal(vscode.Uri.parse(url));
+      (async () => {
+        // vscode.env.openExternal(vscode.Uri.parse(url));
+        // 웹뷰 생성
+        const panel = vscode.window.createWebviewPanel(
+          'urlWebview',           // 내부 식별자
+          'URL Viewer',            // 패널 제목
+          vscode.ViewColumn.One,   // 표시 위치
+          {
+              enableScripts: true,  // 스크립트 실행 허용
+              retainContextWhenHidden: true  // 백그라운드에서 컨텍스트 유지
+          }
+        );
+
+        // 특정 URL 로드
+        panel.webview.html = await getWebviewContent(url);
+      })();
     })
   );
 
@@ -104,6 +119,28 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showInformationMessage('채용공고가 업데이트되었습니다.');
     })
   );
+}
+
+async function getWebviewContent(url: string): Promise<string> {
+  const bodyHTMLs = await getBodyHTMLsFromIframes(url, ['GI_Work_Content', 'GI_Comment']);
+  return `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>URL Viewer</title>
+  </head>
+  <body>
+      ${bodyHTMLs.map((html, index) => `
+        <div class="iframe-content">
+            <h3>Iframe Content ${index + 1}</h3>
+            <div>${html}</div>
+        </div>
+        `).join('')}
+  </body>
+  </html>
+  `;
 }
 
 // 확장 프로그램 비활성화 함수

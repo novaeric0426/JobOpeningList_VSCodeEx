@@ -1,5 +1,6 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import * as cheerio from 'cheerio';
+import puppeteer from 'puppeteer';
 import { extractDateFromString } from '../utils/date';
 
 // 채용공고 데이터 타입
@@ -62,4 +63,25 @@ export const parseJobPostingHTML = (html: string): JobPosting[] => {
         });
     }
     return jobPostings;
+};
+
+/**  */
+export const getBodyHTMLsFromIframes = async (baseUrl: string, iframeNames: string[]): Promise<string[]> => {
+    const browser = await puppeteer.launch({ headless: true });
+    
+    const bodyHTMLs: string[] = [];
+    for (let i = 0; i < iframeNames.length; ++i) {
+        const page = await browser.newPage();
+        await page.goto(baseUrl, { waitUntil: 'networkidle2' });
+        const iframeName = iframeNames[i];
+        const iframeHandle = await page.$(`iframe[name="${iframeName}"]`);
+        const iframeSrc = iframeHandle ? await page.evaluate(iframe => iframe.src, iframeHandle) : '';
+        console.log(iframeSrc);
+        await page.goto(iframeSrc, {
+            waitUntil: 'networkidle2',
+        });
+        const bodyHTML = await page.evaluate(() => document.body.innerHTML);
+        bodyHTMLs.push(bodyHTML);
+    }
+    return bodyHTMLs;
 };
